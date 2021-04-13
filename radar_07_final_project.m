@@ -28,12 +28,14 @@ v=-20;
 
 
 %Operating carrier frequency of Radar 
-fc= 77e9; %carrier freq
-c = 3e8; % speed of light
-% Max Range = 200m
-% Range Resolution = 1 m
-% Max Velocity = 100 m/s
-B = 
+fc= 77e9; % carrier freq, Hz
+c = 3e8; % speed of light, m/s
+R_max = 200; % max range, m
+R_res = 1; % range resolution, m
+v_max = 100; % max velocity, m/s
+B = c/(2*R_res); % bandwidth swept in each chirp, Hz
+Tchirp = 5.5 * 2 * R_max / c; % period of chirps, s
+slope = B/Tchirp; % slope of chirps on the frequency vs time plot, Hz/s
 
                                                           
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT
