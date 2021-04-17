@@ -15,8 +15,8 @@ clc;
 % define the target's initial position and velocity. Note : Velocity
 % remains contant
 
-R=110;
-v=-20;
+R=110; % initial position of target, m
+v=-20; % constant velocity of target, m/s
 
 
 %% FMCW Waveform Generation
@@ -67,19 +67,21 @@ for i=1:length(t)
     
     
     % *%TODO* :
-    %For each time stamp update the Range of the Target for constant velocity. 
+    %For each time stamp update the Range of the Target for constant velocity.
+    r_t(i) = R + v*t(i); % position of the target at time t(i), m
+    td(i) = 2.0 * r_t(i) / c; % time it takes for signal to reach target and return at time t(i), s
     
     % *%TODO* :
     %For each time sample we need update the transmitted and
     %received signal. 
-    Tx(i) = 
-    Rx (i)  =
+    Tx(i) = cos(2*pi * t(i) * (fc + slope * t(i) / 2.0));
+    Rx (i) = cos(2*pi* (t(i)-td(i)) * (fc + slope * (t(i)-td(i)) / 2.0));
     
     % *%TODO* :
     %Now by mixing the Transmit and Receive generate the beat signal
     %This is done by element wise matrix multiplication of Transmit and
     %Receiver Signal
-    Mix(i) = 
+    Mix(i) = Tx(i) * Rx(i);
     
 end
 
@@ -89,28 +91,55 @@ end
  % *%TODO* :
 %reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
 %Range and Doppler FFT respectively.
+Mix=reshape(Mix,[Nr,Nd]);
+% Mix is now a (samples per chirp)x(number of chirps) matrix
+% So each column of Mix is a chirp.
 
  % *%TODO* :
 %run the FFT on the beat signal along the range bins dimension (Nr) and
 %normalize.
+% From the docs on fft:
+% "If X is a matrix, then fft(X) treats the columns of X as vectors and
+% returns the Fourier transform of each column"
+% Thus the following fft operates on the columns, which is sensible.
+sig_fft = fft(Mix)/Nr;
 
  % *%TODO* :
 % Take the absolute value of FFT output
+sig_fft = abs(sig_fft);
 
  % *%TODO* :
 % Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
 % Hence we throw out half of the samples.
+sig_fft = sig_fft(1:(Nr/2),:);
 
 
 %plotting the range
 figure ('Name','Range from First FFT')
+
+
+% *%TODO* :
+% plot FFT output 
+freqs = ((Nr/Tchirp)*(0:(Nr/2)-1)/Nr)';
+sig_first_chirp = sig_fft(:,1);
+sig_last_chirp = sig_fft(:,Nd);
 subplot(2,1,1)
+plot(freqs, sig_first_chirp);
+title('Single-Sided Amplitude Spectrum of First Chirp')
+xlabel('f (Hz)')
+ylabel('amplitude')
+axis ([0 7e7 0 1]);
+subplot(2,1,2)
+plot(freqs, sig_last_chirp);
+title('Single-Sided Amplitude Spectrum of Last Chirp')
+xlabel('f (Hz)')
+ylabel('amplitude')
+axis ([0 7e7 0 1]);
 
- % *%TODO* :
- % plot FFT output 
+% Comment: After looking at what was just plotted, I can see the peak at
+% about 1.5e7 Hz. Computing 1.5e7 * Tchirp * c / (2.0 * B) should recover
+% the range, and indeed we get 110, which is the initial position.
 
- 
-axis ([0 200 0 1]);
 
 
 
