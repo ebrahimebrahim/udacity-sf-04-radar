@@ -178,13 +178,22 @@ figure,surf(doppler_axis,range_axis,RDM);
 
 % *%TODO* :
 %Select the number of Training Cells in both the dimensions.
+Tr=10;
+Td=8;
 
 % *%TODO* :
 %Select the number of Guard Cells in both dimensions around the Cell under 
 %test (CUT) for accurate estimation
+Gr=4;
+Gd=4;
+
+% There is a better way to compute this but the following is visually
+% intuitive.
+num_training_cells = (2*Tr+2*Gr+1)*(2*Td+2*Gd+1) - (2*Gr+1)*(2*Gd+1);
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
+offset = 10;
 
 % *%TODO* :
 %Create a vector to store noise_level for each iteration on training cells
@@ -206,7 +215,27 @@ noise_level = zeros(1,1);
    % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
    % CFAR
 
-
+for i = (Tr+Gr+1):(Nr/2-(Gr+Tr))
+    for j = (Td+Gd+1):(Nd-(Gd+Td))
+        noise_level=0;
+        for p = (i-(Tr+Gr)):(i+Tr+Gr)
+            for q = (j-(Td+Gd)):(j+Td+Gd)
+                if (abs(i-p)>Gr || abs(j-q)>Gd)
+                    noise_level = noise_level + db2pow(RDM(p,q));
+                end
+            end
+        end
+        % pow2db has a bug in my version of matlab so we do it explicitly:
+        threshold = 10*log10(noise_level/num_training_cells); 
+        threshold = threshold+offset;
+        CUT = RDM(i,j);
+        if (CUT<threshold)
+            RDM(i,j)=0.0;
+        else
+            RDM(i,j)=1.0;
+        end
+    end
+end
 
 
 
@@ -216,9 +245,29 @@ noise_level = zeros(1,1);
 %matrix. Hence,few cells will not be thresholded. To keep the map size same
 % set those values to 0. 
  
+for i = 1:Nr/2
+    for j = 1:(Td+Gd)
+        RDM(i,j)=0.0;
+    end
+end
 
+for i = 1:(Tr+Gr)
+    for j = 1:Nd
+        RDM(i,j)=0.0;
+    end
+end
 
+for i = (Nr/2-(Gr+Tr)+1):Nr/2
+    for j = 1:Nd
+        RDM(i,j)=0.0;
+    end
+end
 
+for i = 1:Nr/2
+    for j = (Nd-(Gd+Td)+1):Nd
+        RDM(i,j)=0.0;
+    end
+end
 
 
 
@@ -227,7 +276,7 @@ noise_level = zeros(1,1);
 % *%TODO* :
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
-figure,surf(doppler_axis,range_axis,'replace this with output');
+figure,surf(doppler_axis,range_axis,RDM);
 colorbar;
 
 
